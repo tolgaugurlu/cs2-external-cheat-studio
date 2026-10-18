@@ -1,5 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from pathlib import Path
+from runpy import run_path
+from PyInstaller.utils.win32.versioninfo import (
+    FixedFileInfo, StringFileInfo, StringStruct, StringTable,
+    VarFileInfo, VarStruct, VSVersionInfo,
+)
+release = run_path(str(Path(SPECPATH) / 'app_version.py'))
+version_tuple = tuple(int(part) for part in release['APP_VERSION'].split('.')) + (0,)
+version_info = VSVersionInfo(
+    ffi=FixedFileInfo(filevers=version_tuple, prodvers=version_tuple),
+    kids=[
+        StringFileInfo([StringTable('040904b0', [
+            StringStruct('CompanyName', 'tolgaugurlu'),
+            StringStruct('FileDescription', release['APP_NAME']),
+            StringStruct('FileVersion', release['APP_VERSION']),
+            StringStruct('InternalName', release['APP_SLUG']),
+            StringStruct('OriginalFilename', release['EXE_NAME'] + '.exe'),
+            StringStruct('ProductName', release['APP_NAME']),
+            StringStruct('ProductVersion', release['APP_VERSION']),
+        ])]),
+        VarFileInfo([VarStruct('Translation', [1033, 1200])]),
+    ],
+)
 
 a = Analysis(
     ['memory_bot.py'],
@@ -22,7 +44,8 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='CS2Studio',
+    name=release['EXE_NAME'],
+    version=version_info,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

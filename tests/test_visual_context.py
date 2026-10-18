@@ -79,6 +79,7 @@ class GlowLifecycleTests(unittest.TestCase):
                 return True
             def restore_except(self,active=(),grace=0):
                 calls.append((event.frame,set(active),grace))
+            def interval(self):return 1/60
         def health(address):
             if event.frame==2: raise OSError('incomplete frame')
             return 100
@@ -90,9 +91,9 @@ class GlowLifecycleTests(unittest.TestCase):
         path=Path(__file__).resolve().parents[1]/'memory_bot.py'
         tree=ast.parse(path.read_text(encoding='utf-8-sig'))
         node=next(n for n in tree.body if getattr(n,'name',None)=='glow_worker')
-        from model_glow import GlowMonitor
-        ns={'Config':cfg,'ModelGlow':Glow,'GlowMonitor':GlowMonitor,'time':time,'PALETTES':{'palette':('red','blue'),'Koral / Mavi':('red','blue')},
-            'team_allowed':team_allowed,'view_context':lambda *a:ViewContext(1000,2,1000)}
+        ns={'Config':cfg,'ModelGlow':Glow,'time':time,'PALETTES':{'palette':('red','blue'),'Koral / Mavi':('red','blue')},
+            'team_allowed':team_allowed,'view_context':lambda *a:ViewContext(1000,2,1000),
+            'wait_contour_frame':lambda stop,started,interval:stop.wait(interval)}
         exec(compile(ast.Module(body=[node],type_ignores=[]),'memory_bot.py','exec'),ns)
         ns['glow_worker'](eng)
         identity=(2000,7,3000)

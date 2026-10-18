@@ -2,11 +2,13 @@
 import hashlib
 import hmac
 import json
+import logging
 import math
 import mmap
 import os
 from pathlib import Path
 import re
+import socket
 import struct
 import subprocess
 import threading
@@ -14,10 +16,24 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from offset_manager import installed_build
+from setup_runtime import load_settings
 
 NODE = struct.Struct('<6f4i')
 TRI = struct.Struct('<9f')
 MAP_NAME = re.compile(r'^(?:de|cs|ar)_[a-z0-9_]+$')
+
+
+class MapSignalServer(ThreadingHTTPServer):
+    # Windows SO_REUSEADDR can let two listeners share a port and silently steal
+    # each other's game updates. One owner must receive the entire signal stream.
+    allow_reuse_address = False
+    allow_reuse_port = False
+    daemon_threads = True
+
+    def server_bind(self):
+        if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 def segment_distance_sq(p,q,a,b):
@@ -231,11 +247,21 @@ class MapVisibility:
     def start(self):
         threading.Thread(target=self.run,daemon=True).start()
 
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, message):
+        if message != getattr(self, '_status', None):
+            logging.info('[Map] %s', message)
+        self._status = message
+
     def run(self):
         try:
             _, steam_inf = installed_build()
             game_dir = steam_inf.parent
-            settings = json.loads((self.base/'gsi_config.json').read_text(encoding='utf-8'))
+            settings = load_settings(self.base, steam_inf)
             owner = self
             class Handler(BaseHTTPRequestHandler):
                 def do_POST(self):
@@ -251,8 +277,12 @@ class MapVisibility:
                     except (ValueError,TypeError,AttributeError):
                         self.send_error(400)
                 def log_message(self,*args): pass
-            self.server = ThreadingHTTPServer(('127.0.0.1', settings['port']), Handler)
-            self.server.daemon_threads = True
+            try:
+                self.server = MapSignalServer(('127.0.0.1', settings['port']), Handler)
+            except OSError as error:
+                if error.errno in (98, 10048) or getattr(error, 'winerror', None) in (10013, 10048):
+                    raise OSError('Harita bağlantısı başka uygulamada açık · eski uygulamayı kapat') from error
+                raise
             threading.Thread(target=self.server.serve_forever,daemon=True).start()
             attempt, last_attempt, verified_at = None, 0, 0
             while not self.stop.wait(.1):

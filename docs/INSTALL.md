@@ -40,14 +40,14 @@ $env:CS2_STEAM_INF = 'D:\SteamLibrary\steamapps\common\Counter-Strike Global Off
 
 The example drive is a placeholder. Do not copy another user's GSI token or personal settings.
 
-## Use an EXE you built
+## Use the Windows package
 
-Follow [Build](BUILD.md), then extract `CS2Studio-Windows-x64.zip` into a writable folder. Keep `CS2Studio.exe` and the entire `map-tools` directory together. From that folder:
+Download `StudioPanel-1.1.2-Windows-x64.zip` from the [1.1.2 release](https://github.com/tolgaugurlu/cs2-external-cheat-studio/releases/tag/v1.1.2), or follow [Build](BUILD.md) to create it yourself. Extract it into a writable folder. Inside the `StudioPanel` folder, keep `StudioPanel-1.1.2.exe` and the entire `map-tools` directory together. From that folder:
 
 ```powershell
-.\CS2Studio.exe --demo
-.\CS2Studio.exe --setup
-.\CS2Studio.exe
+.\StudioPanel-1.1.2.exe --demo
+.\StudioPanel-1.1.2.exe --setup
+.\StudioPanel-1.1.2.exe
 ```
 
 Setup displays success or an error in a dialog. Restart CS2 after setup. On normal launch the application checks the installed game build and retrieves matching offsets. If no matching data is available, wait for the upstream providers; do not bypass version checks.
@@ -64,7 +64,7 @@ The app starts paused. F2 starts/stops, F3 shows/hides the panel and F4 toggles 
 | Port already in use | Close another copy of this app using local port 34371 |
 | Build mismatch | Wait for a matching upstream offset snapshot |
 | Profile changes do not apply | Save the weapon form; check automatic profile switching and the active profile label |
-| Glow flicker | The independent silhouette avoids that specific shared-field conflict but approximates the model |
+| Glow flicker | The game can overwrite contour fields; the independent renderer was removed in 1.1.0 |
 
 Do not disable Windows security tools as an installation step. Keep only installations whose source and build you have reviewed.
 

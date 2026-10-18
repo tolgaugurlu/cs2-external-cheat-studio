@@ -7,13 +7,13 @@ from memory_bot import Config, KEY_MAP, B_MAP, T_MODES
 from control_panel import ControlPanel
 from settings_profiles import settings_snapshot, ProfileStore, WeaponRuntime
 from runtime_stats import RuntimeStats
+from app_version import APP_NAME, APP_VERSION
 
 
 def main():
     cfg = SimpleNamespace(**settings_snapshot(Config), enabled=False)
     cfg.save = lambda: True
     cfg.glow_chams = True
-    cfg.esp_render_mode = 'Kararlı siluet'
     eng = SimpleNamespace(ready=True, offset_status='DEMO · Oyun bağlantısı ve gerçek girdiler kapalı',
         glow_status='Önizleme · örnek karakter çizimi', flick_status='Demo · gerçek atış yapılmaz',
         stop_event=threading.Event(), glow_thread=None, visibility=SimpleNamespace(
@@ -28,7 +28,7 @@ def main():
     eng.stats.status('Profil', 'Örnek AWP profili seçildi')
     root = tk.Tk()
     panel = ControlPanel(root, eng, cfg, KEY_MAP, B_MAP, T_MODES, live=False)
-    root.title('CS2 Studio — Documentation demo')
+    root.title(f'{APP_NAME} {APP_VERSION} — Çevrimdışı demo')
     panel.btn.configure(state='disabled', text='DEMO')
     root.mainloop()
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from setup_runtime import install
+from setup_runtime import install, load_settings
 
 
 class SetupTests(unittest.TestCase):
@@ -45,3 +45,29 @@ class SetupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             install(self.base, self.inf)
         self.assertEqual(target.read_bytes(), original)
+
+    def test_moved_install_recovers_same_connection_without_touching_game_config(self):
+        target=install(self.base,self.inf)
+        original=target.read_bytes()
+        settings=load_settings(self.base,self.inf)
+        moved=self.root/'moved'
+        self.assertEqual(load_settings(moved,self.inf),settings)
+        self.assertEqual(json.loads((moved/'gsi_config.json').read_text()),settings)
+        self.assertEqual(target.read_bytes(),original)
+
+    def test_existing_invalid_settings_are_not_replaced_by_recovery(self):
+        install(self.base,self.inf)
+        path=self.base/'gsi_config.json'
+        path.write_text('{invalid')
+        with self.assertRaises(ValueError): load_settings(self.base,self.inf)
+        self.assertEqual(path.read_text(),'{invalid')
+
+    def test_missing_or_remote_integration_is_not_imported(self):
+        with self.assertRaises(FileNotFoundError):load_settings(self.base,self.inf)
+        target=install(self.base,self.inf)
+        for uri in ('http://example.com:34371/','http://127.0.0.1:80/'):
+            original=target.read_text()
+            target.write_text(original.replace('http://127.0.0.1:34371/',uri))
+            with self.assertRaises(ValueError):load_settings(self.root/'moved',self.inf)
+            self.assertFalse((self.root/'moved/gsi_config.json').exists())
+            target.write_text(original)

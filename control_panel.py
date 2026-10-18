@@ -1,17 +1,13 @@
-"""Desktop controls and overlay presentation; no input automation in this module."""
+"""Desktop controls and static contour preview; no input automation in this module."""
 import ctypes
-import math
 import logging
-import struct
 import time
 import tkinter as tk
 from tkinter import ttk
 
-from esp_visuals import CanvasSink, EspRenderer, PROFILES, PALETTES, BONE_IDS, sample_pose
-from targeting import team_allowed
+from visual_style import PALETTES, sample_pose
+from app_version import APP_NAME, APP_VERSION
 from hotkeys import HotkeyEdges
-from visual_context import view_context
-from gdi_overlay import GdiSink
 from flick_shot import FLICK_KEYS, KNIFE_KEYS, REARM_KEYS
 from settings_profiles import ProfileStore, WeaponRuntime
 from runtime_stats import RuntimeStats
@@ -33,15 +29,13 @@ class ControlPanel(StudioPanels):
         self.key_map, self.bone_map, self.trigger_modes = key_map, bone_map, trigger_modes
         self.live, self.closing, self.initializing = live, False, True
         self.vars, self.scales, self.scale_labels = {}, {}, {}
-        self.last_overlay_error = 0
-        self.pose_cache = {}
         self.save_token=None
         self.scale_suffixes={}
         if not hasattr(config,'weapon_profiles_enabled'):config.weapon_profiles_enabled=True
         if not hasattr(engine,'stats'):engine.stats=RuntimeStats()
         if not hasattr(engine,'profiles'):engine.profiles=ProfileStore(None,config,persist=False)
         if not hasattr(engine,'runtime_config'):engine.runtime_config=WeaponRuntime(config,engine.profiles)
-        root.title('CS2 Studio')
+        root.title(f'{APP_NAME} {APP_VERSION}')
         from ctypes import wintypes
         area=wintypes.RECT()
         ctypes.windll.user32.SystemParametersInfoW(48,0,ctypes.byref(area),0)
@@ -71,8 +65,8 @@ class ControlPanel(StudioPanels):
 
         header = tk.Frame(root, bg=BG)
         header.pack(fill='x', padx=18, pady=(12, 8))
-        self.text(header, 'CS2 Studio', 20, FG, True).pack(side='left')
-        self.text(header, 'PYTHON · WINDOWS', 10, MUTED).pack(side='left', padx=14)
+        self.text(header, APP_NAME, 20, FG, True).pack(side='left')
+        self.text(header, f'v{APP_VERSION} · WINDOWS', 10, MUTED).pack(side='left', padx=14)
         self.state_label = self.text(header, 'DURAKLATILDI', 10, BLUE, True)
         self.state_label.pack(side='right')
 
@@ -115,8 +109,6 @@ class ControlPanel(StudioPanels):
         if live:
             self.hotkey_edges = HotkeyEdges(ctypes.windll.user32.GetAsyncKeyState)
             self.poll_hotkeys()
-            self.setup_overlay()
-            self.draw_overlay()
 
     @staticmethod
     def text(parent, text, size=10, color=FG, bold=False):
@@ -165,32 +157,29 @@ class ControlPanel(StudioPanels):
         self.scales[key] = scale
 
     def appearance(self, page):
-        cols=[tk.Frame(page,bg=BG) for _ in range(3)]
-        for i,col in enumerate(cols):
-            col.grid(row=0,column=i,sticky='nsew',padx=(0 if i==0 else 10,0),pady=8)
-            page.columnconfigure(i,weight=1 if i<2 else 2,uniform='appearance')
-        page.rowconfigure(0,weight=1)
-        model=self.card(cols[0],'Karakter modeli');model.pack(fill='both',expand=True)
-        self.check(model,'Model silueti / Glow','glow_chams')
-        self.combo(model,'Siluet yöntemi','esp_render_mode',['Otomatik','Kararlı siluet','Oyun konturu'])
-        self.combo(model,'Renk paleti','esp_palette',list(PALETTES))
-        note=self.text(model,'Otomatik: Glow çakışırsa bağımsız çizime geçer. Kararlı siluet yaklaşık vücut çizimidir; birebir model kaplaması değildir.',9,MUTED)
-        note.configure(wraplength=185,justify='left');note.pack(anchor='w',pady=12)
-        self.glow_label=self.text(model,'',9,BLUE)
-        self.glow_label.configure(wraplength=185,justify='left');self.glow_label.pack(anchor='w',pady=8)
-        info=self.card(cols[1],'Bilgi katmanı');info.pack(fill='both',expand=True)
-        for text,key in [('Bilgi katmanı','ghost_esp'),('Köşe çerçeveleri','esp_boxes'),('İskelet çizgileri','esp_skeleton'),('Can çubuğu','esp_health'),('Mesafe etiketleri','esp_labels')]:
-            self.check(info,text,key)
-        self.combo(info,'Çizim profili','esp_profile',list(PROFILES))
-        self.slider(info,'Yazı boyutu','esp_text_scale',80,150,'%')
-        preview=self.card(cols[2],'Görünüm önizlemesi','Şematik örnek · oyun görüntüsü değildir')
-        preview.pack(fill='both',expand=True)
-        self.preview=tk.Canvas(preview,bg='#101825',highlightthickness=0,width=220,height=160)
-        self.preview.pack(fill='both',expand=True)
-        self.preview_renderer=EspRenderer(CanvasSink(self.preview))
-        self.preview.bind('<Configure>',lambda event:self.draw_preview())
-        self.text(preview,'RAKİP: vurgu rengi · TAKIM: mavi',9,MUTED).pack(anchor='w',pady=(8,0))
-        self.text(preview,'F2 Başlat / durdur   F3 Gizle   F4 Tetik',9,MUTED).pack(anchor='w',pady=(4,0))
+        page.columnconfigure(0, weight=1, uniform='appearance')
+        page.columnconfigure(1, weight=2, uniform='appearance')
+        page.rowconfigure(0, weight=1)
+        model = self.card(page, 'Oyun konturu')
+        model.grid(row=0, column=0, sticky='nsew', pady=8, padx=(0, 12))
+        self.check(model, 'Oyun konturu / Glow', 'glow_chams')
+        self.combo(model, 'Renk paleti', 'esp_palette', list(PALETTES))
+        note = self.text(model, 'Karakterin oyun içindeki konturunu kullanır. Ayrı ESP penceresi, siluet, iskelet, kutu ve etiket çizimi kaldırıldı.', 10, MUTED)
+        note.configure(wraplength=265, justify='left')
+        note.pack(anchor='w', pady=18)
+        self.glow_label = self.text(model, '', 10, BLUE)
+        self.glow_label.configure(wraplength=265, justify='left')
+        self.glow_label.pack(anchor='w', pady=8)
+        note = self.text(model, 'Oyun kontur değerlerini yeniden yazarsa yanıp sönme yine oluşabilir.', 9, MUTED)
+        note.configure(wraplength=265, justify='left')
+        note.pack(anchor='w', pady=12)
+        preview = self.card(page, 'Renk önizlemesi', 'Şematik örnek · oyun görüntüsü değildir')
+        preview.grid(row=0, column=1, sticky='nsew', pady=8)
+        self.preview = tk.Canvas(preview, bg='#101825', highlightthickness=0, width=220, height=160)
+        self.preview.pack(fill='both', expand=True)
+        self.preview.bind('<Configure>', lambda event: self.draw_preview())
+        self.text(preview, 'RAKİP: vurgu rengi · TAKIM: mavi', 9, MUTED).pack(anchor='w', pady=(8, 0))
+        self.text(preview, 'F2 Başlat / durdur   F3 Gizle   F4 Tetik', 9, MUTED).pack(anchor='w', pady=(4, 0))
 
     def controls(self, page):
         cols = [tk.Frame(page, bg=BG) for _ in range(3)]
@@ -209,6 +198,9 @@ class ControlPanel(StudioPanels):
         self.slider(self.aim_tuning_frames['Akıcı takip'],'Dönüş hızı sınırı','aim_max_speed',120,1440,' °/sn')
         self.slider(self.aim_tuning_frames['Ayarlanabilir'], 'Yumuşatma', 'smooth', 1, 50)
         self.slider(self.aim_tuning_frames['Ayarlanabilir'], 'Hız sınırı', 'speed_cap', 5, 250)
+        self.aim_mode_note = self.text(aim, '', 9, BLUE)
+        self.aim_mode_note.configure(wraplength=260, justify='left')
+        self.aim_mode_note.pack(anchor='w', pady=(6, 0))
         self.sync_aim_tuning()
         self.combo(aim, 'Nişan tuşu', 'aim_key', list(self.key_map), self.key_map)
         self.combo(aim, 'Hedef noktası', 'target_bone', list(self.bone_map), self.bone_map)
@@ -218,7 +210,7 @@ class ControlPanel(StudioPanels):
         helpers.pack(fill='x')
         self.check(helpers, 'Geri tepme düzeltmesi', 'rcs_enabled')
         self.check(helpers, 'BunnyHop', 'bhop_enabled')
-        self.check(helpers, 'AWP modu', 'awp_mode')
+        self.check(helpers, 'AWP: gövde noktası', 'awp_mode')
         trigger = self.card(cols[1], 'Tetik')
         trigger.pack(fill='x', pady=(12, 0))
         self.check(trigger, 'Otomatik tetik / F4', 'trigger_enabled')
@@ -261,13 +253,9 @@ class ControlPanel(StudioPanels):
         self.flick_label.configure(wraplength=540,justify='left')
         self.flick_label.pack(anchor='w',pady=(12,0))
 
-    def renderer_options(self):
-        return dict(profile=self.cfg.esp_profile, palette=self.cfg.esp_palette,
-                    text_scale=self.cfg.esp_text_scale, skeleton=self.cfg.esp_skeleton,
-                    boxes=self.cfg.esp_boxes, health_bar=self.cfg.esp_health, labels=self.cfg.esp_labels)
 
     def draw_preview(self):
-        if not hasattr(self, 'preview_renderer') or self.closing:
+        if not hasattr(self, 'preview') or self.closing:
             return
         cv = self.preview
         width, height = max(180, cv.winfo_width()), max(140, cv.winfo_height())
@@ -277,35 +265,22 @@ class ControlPanel(StudioPanels):
             cv.create_line(0, height * .67 + i * 22, width, height * .67 + i * 22, fill='#223047', tags='scene')
         for x in range(0, int(width) + 1, 60):
             cv.create_line(width / 2, height * .55, x, height, fill='#223047', tags='scene')
-        renderer = self.preview_renderer
-        renderer.begin((width, height))
         colors = PALETTES.get(self.cfg.esp_palette, PALETTES['Koral / Mavi'])
-        for index, (x, size, hp, distance) in enumerate(((width * .31, height * .58, 76, 18),
-                                                       (width * .76, height * .40, 100, 34))):
+        for index, (x, size) in enumerate(((width * .31, height * .58), (width * .76, height * .40))):
             pose = sample_pose(x, height * .19 + (height * .58 - size), size)
             color = colors[index]
-            silhouette = self.cfg.glow_chams and getattr(self.cfg,'esp_render_mode','Otomatik') != 'Oyun konturu'
-            if not silhouette:
-                # Deliberately schematic body, not a claim to preview the game's shader.
-                for a, b in ((5, 8), (8, 9), (9, 11), (5, 13), (13, 14), (14, 16),
-                             (2, 22), (22, 23), (23, 24), (2, 25), (25, 26), (26, 27), (5, 2)):
-                    thickness = size * (.20 if (a, b) == (5, 2) else .09)
-                    if self.cfg.glow_chams:
-                        cv.create_line(*pose[a], *pose[b], fill=color, width=thickness + 5,
-                                       capstyle='round', tags='scene')
-                    cv.create_line(*pose[a], *pose[b], fill='#35465D', width=thickness,
+            for a, b in ((5, 8), (8, 9), (9, 11), (5, 13), (13, 14), (14, 16),
+                         (2, 22), (22, 23), (23, 24), (2, 25), (25, 26), (26, 27), (5, 2)):
+                thickness = size * (.20 if (a, b) == (5, 2) else .09)
+                if self.cfg.glow_chams:
+                    cv.create_line(*pose[a], *pose[b], fill=color, width=thickness + 5,
                                    capstyle='round', tags='scene')
-                hx, hy = pose[6]
-                radius = size * .065
-                cv.create_oval(hx - radius, hy - radius, hx + radius, hy + radius,
-                               fill='#43536A', outline=color if self.cfg.glow_chams else '#52647C', width=3, tags='scene')
-            if self.cfg.ghost_esp or silhouette:
-                options=self.renderer_options()
-                if not self.cfg.ghost_esp:
-                    options.update(skeleton=False,boxes=False,health_bar=False,labels=False)
-                renderer.player(index, pose, hp, distance, enemy=index == 0, silhouette=silhouette, **options)
-        cv.tag_lower('scene')
-        renderer.end()
+                cv.create_line(*pose[a], *pose[b], fill='#35465D', width=thickness,
+                               capstyle='round', tags='scene')
+            hx, hy = pose[6]
+            radius = size * .065
+            cv.create_oval(hx - radius, hy - radius, hx + radius, hy + radius,
+                           fill='#43536A', outline=color if self.cfg.glow_chams else '#52647C', width=3, tags='scene')
 
     def slider_changed(self, key, value, suffix):
         if self.initializing:
@@ -363,6 +338,11 @@ class ControlPanel(StudioPanels):
         self.draw_preview()
 
     def sync_aim_tuning(self):
+        if hasattr(self, 'aim_mode_note'):
+            notes = {'Akıcı takip': 'Süre ve hız sınırıyla yumuşak takip.',
+                     'Keskin kilit': 'Anlık dönüş; yumuşatma uygulanmaz.',
+                     'Ayarlanabilir': 'Yumuşatma ve hız ayarları uygulanır.'}
+            self.aim_mode_note.config(text=notes.get(self.cfg.aim_response, ''))
         for name,frame in self.aim_tuning_frames.items():
             if name == self.cfg.aim_response:
                 if not frame.winfo_manager(): frame.pack(fill='x')
@@ -427,149 +407,11 @@ class ControlPanel(StudioPanels):
         self.queue_settings_save()
         self.trigger_notify_time = time.monotonic()
 
-    def setup_overlay(self):
-        eng = self.eng
-        self.ov = tk.Toplevel(self.root)
-        self.ov.overrideredirect(True)
-        self.ov.geometry(f'{eng.sx}x{eng.sy}+0+0')
-        self.ov.attributes('-topmost', True, '-transparentcolor', 'black')
-        self.ov.configure(bg='black')
-        self.ov.update_idletasks()
-        hwnd = int(self.ov.wm_frame(), 16)
-        style = ctypes.windll.user32.GetWindowLongW(hwnd, -20)
-
-        ctypes.windll.user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20 | 0x08000000 | 0x80)
-        self.cv = tk.Canvas(self.ov, bg='black', highlightthickness=0)
-        self.cv.pack(fill='both', expand=True)
-        self.renderer = EspRenderer(CanvasSink(self.cv))
-        self.silhouette_renderer = EspRenderer(GdiSink(eng.sx,eng.sy))
-        self.ov.withdraw()
-        self.overlay_visible = False
-
-    def draw_overlay(self):
-        if self.closing:
-            return
-        eng, cfg, renderer = self.eng, self.cfg, self.renderer
-        silhouette = cfg.glow_chams and (getattr(cfg,'esp_render_mode','Otomatik')=='Kararlı siluet'
-                     or (getattr(cfg,'esp_render_mode','Otomatik')=='Otomatik' and getattr(eng,'glow_fallback',False)))
-        players_visible = silhouette or (cfg.ghost_esp and any((cfg.esp_skeleton,cfg.esp_boxes,cfg.esp_health,cfg.esp_labels)))
-        frame_time = time.monotonic()
-        renderer.begin((eng.sx, eng.sy))
-        self.silhouette_renderer.begin((eng.sx,eng.sy))
-        try:
-            if not (cfg.enabled and (cfg.ghost_esp or cfg.glow_chams)
-                    and eng.pm and eng.ready and eng.is_game_foreground()):
-                self.pose_cache.clear()
-                return
-            entity_list = eng.read_longlong(eng.client + eng.off['dwEntityList'])
-            context = view_context(eng,entity_list) if entity_list else None
-            if context is None:
-                self.pose_cache.clear()
-                return
-            if players_visible:
-                matrix = struct.unpack('16f', eng.read_bytes(eng.client + eng.off['dwViewMatrix'], 64))
-                origin = eng._f('C_BasePlayerPawn', 'm_vOldOrigin')
-                local_pos = (struct.unpack('3f',eng.read_bytes(context.camera_pawn + origin,12))
-                             if context.camera_pawn else None)
-                local_team = context.team
-                bone_ids = BONE_IDS if silhouette or cfg.esp_skeleton else (6,2,24,27)
-                options = self.renderer_options()
-                if not cfg.ghost_esp:
-                    options.update(skeleton=False,boxes=False,health_bar=False,labels=False)
-                active=set()
-                for index, (pawn, ctrl, entity_index) in sorted(tuple(eng.p_cache.items())):
-                    try:
-                        handle = eng.read_uint(ctrl + eng._off_ph)
-                        if eng.entity_from_index(entity_list, handle) != pawn or context.excludes(pawn):
-                            continue
-                        hp, team = eng.read_int(pawn + eng._off_h), eng.read_team(pawn)
-                        if hp <= 0 or not team_allowed(cfg.team_mode, local_team, team):
-                            continue
-                        key=(pawn,ctrl,handle)
-                        active.add(key)
-                        world = eng.get_bones(pawn, bone_ids)
-                        if 2 in world and 6 in world and (24 in world or 27 in world):
-                            self.pose_cache[key]=(frame_time,world)
-                        elif key in self.pose_cache and frame_time-self.pose_cache[key][0] <= .1:
-
-                            # camera, so read gaps never pin a figure to the screen.
-                            world=self.pose_cache[key][1]
-                        else:
-                            continue
-                        coords = {bone: point for bone, pos in world.items() if (point := eng.w2s(matrix, pos))}
-                        distance = math.dist(local_pos,world[2]) * .0254 if local_pos else None
-                        if silhouette:
-                            self.silhouette_renderer.player((pawn,handle),coords,hp,distance,enemy=team!=local_team,
-                                silhouette=True,palette=cfg.esp_palette,skeleton=False,boxes=False,health_bar=False,labels=False)
-                        if cfg.ghost_esp:
-                            renderer.player((pawn, handle), coords, hp, distance, enemy=team != local_team,
-                                            targeted=index == eng.target_id, **options)
-                    except (OSError, ValueError):
-                        continue
-                self.pose_cache={key:value for key,value in self.pose_cache.items()
-                                 if key in active and frame_time-value[0] <= .1}
-            self.draw_bomb(context.local)
-            if time.monotonic() - getattr(self, 'trigger_notify_time', 0) < 2:
-                renderer.banner('trigger', 'Tetik açık' if cfg.trigger_enabled else 'Tetik kapalı',
-                                f'{cfg.trigger_delay} ms gecikme · F4', y=108, color=BLUE)
-        except Exception as error:
-            if time.monotonic() - self.last_overlay_error > 5:
-                print(f'[Overlay] {type(error).__name__}: {error}')
-                self.last_overlay_error = time.monotonic()
-        finally:
-            try:
-                self.silhouette_renderer.end()
-            except OSError:
-                self.silhouette_renderer.sink.hide()
-                logging.exception('Independent silhouette presentation failed')
-            renderer.end()
-            visible = bool(renderer.sink.items)
-            if visible != self.overlay_visible:
-                self.ov.deiconify() if visible else self.ov.withdraw()
-                self.overlay_visible = visible
-
-            drawing = visible or bool(self.silhouette_renderer.sink.items)
-            if hasattr(eng,'stats'):eng.stats.timing('ESP',time.monotonic()-frame_time)
-            self.root.after(33 if drawing and players_visible else 100, self.draw_overlay)
-
-    def draw_bomb(self, local):
-        """Compact timer, using schema fields and the current tick clock."""
-        eng = self.eng
-        try:
-            holder = eng.read_longlong(eng.client + eng.off['dwPlantedC4'])
-            bomb = eng.read_longlong(holder) if holder else 0
-            field = lambda name: bomb + eng._f('C_PlantedC4', name)
-            if not bomb or eng.read_bytes(field('m_bBombTicking'), 1) != b'\x01':
-                self.bomb_defusing = False
-                return
-            controller = eng.read_longlong(eng.client + eng.off['dwLocalPlayerController'])
-            ticks = eng.read_int(controller + eng._f('CBasePlayerController', 'm_nTickBase'))
-            clock = ticks / 64
-            remaining = eng.read_float(field('m_flC4Blow')) - clock
-            length = eng.read_float(field('m_flTimerLength'))
-            if not 0 < remaining <= 60 or length <= 0:
-                return
-            defusing = eng.read_bytes(field('m_bBeingDefused'), 1) == b'\x01'
-            detail = 'Bomba aktif'
-            if defusing:
-                seconds = max(0, eng.read_float(field('m_flDefuseCountDown')) - clock)
-                detail = f'Çözülüyor · {seconds:.1f} sn · ' + ('Süre yeterli' if seconds < remaining else 'Süre yetmiyor')
-            elif getattr(self, 'bomb_defusing', False):
-                self.bomb_cancelled_at = time.monotonic()
-            if not defusing and time.monotonic() - getattr(self, 'bomb_cancelled_at', 0) < 3:
-                detail = 'Çözme bırakıldı'
-            self.bomb_defusing = defusing
-            self.renderer.banner('bomb', f'C4  ·  {remaining:.1f} sn', detail, remaining / length,
-                                 color=ACCENT if remaining < 10 else '#FFD27A')
-        except (OSError, KeyError, ValueError):
-            return
 
     def close(self):
         try:self.flush_settings()
         except OSError:logging.exception('Settings could not be saved on close')
         self.closing = True
-        if hasattr(self,'silhouette_renderer'):
-            self.silhouette_renderer.sink.close()
         self.cfg.enabled = False
         self.eng.stop_event.set()
         if hasattr(self.eng,'visibility'):

@@ -2,6 +2,8 @@
 
 **F2:** başlat/durdur · **F3:** paneli göster/gizle · **F4:** otomatik tetik. Demo modunda global tuşlar ve oyun girdisi yoktur. Normal açılış duraklatılmıştır.
 
+Görünümde yalnızca **Oyun konturu / Glow** ve renk paleti bulunur. Ayrı ESP çizimi kaldırılmıştır. Tepki biçimleri ve EXE güncelleme davranışı için [güncelleme notlarına](UPDATES.tr.md) bak.
+
 ## Silaha özel profil
 
 **Profiller → Silaha özel** bölümünden silah veya grup seç. Formu düzenleyip **Profili kaydet** düğmesine bas. Kaydetmeden forma yazılanlar uygulanmaz. Öncelik **silah → grup → genel** şeklindedir. Kontroller sekmesi genel ayarları düzenler; kayıtlı silah profilini değiştirmez.

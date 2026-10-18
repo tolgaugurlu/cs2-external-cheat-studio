@@ -1,6 +1,6 @@
 import unittest
 
-from model_glow import ModelGlow, GlowMonitor
+from model_glow import ModelGlow, wait_contour_frame
 from offset_manager import field_offset
 
 
@@ -126,17 +126,40 @@ class GlowTests(unittest.TestCase):
         self.assertFalse(self.glow.last_seen)
         self.assertEqual(self.writes,[])
 
+    def test_game_start_time_is_never_reset_or_restored(self):
+        import struct
+        address=1000+self.offset('C_BaseModelEntity','m_Glow')+self.offset('CGlowProperty','m_flGlowStartTime')
+        for value in (1000.,1000.1,1000.2):
+            expected=struct.pack('<f',value)
+            self.memory[address:address+4]=expected
+            self.glow.apply(self.identity,'#FF8C79')
+            self.assertEqual(self.memory[address:address+4],expected)
+        self.glow.restore_except()
+        self.assertEqual(self.memory[address:address+4],expected)
 
-class GlowMonitorTests(unittest.TestCase):
-    def test_repeated_overwrites_switch_once_and_latch_until_explicit_reset(self):
-        monitor=GlowMonitor()
-        for i in range(20):self.assertFalse(monitor.observe(8,8,i/10))
-        self.assertTrue(monitor.observe(8,8,2))
-        for i in range(100):self.assertTrue(monitor.observe(0,0,2+i))
-        monitor.reset()
-        self.assertFalse(monitor.observe(0,8,200))
+    def test_overwrite_temporarily_increases_repair_rate_then_returns_to_idle_rate(self):
+        from unittest.mock import patch
+        with patch('model_glow.time.monotonic',return_value=1):
+            self.glow.apply(self.identity,'#FF8C79')
+            self.assertEqual(self.glow.interval(),1/240)
+        with patch('model_glow.time.monotonic',return_value=2):
+            self.glow.apply(self.identity,'#FF8C79')
+            self.assertEqual(self.glow.interval(),1/60)
+            address=1000+self.glow.fields['m_bGlowing']
+            self.memory[address]=0
+            self.glow.apply(self.identity,'#FF8C79')
+            self.assertEqual(self.glow.interval(),1/240)
+        with patch('model_glow.time.monotonic',return_value=3):
+            self.assertEqual(self.glow.interval(),1/60)
 
-    def test_sparse_updates_or_single_palette_change_do_not_switch(self):
-        monitor=GlowMonitor()
-        for i in range(100):
-            self.assertFalse(monitor.observe(8 if i==1 else 0,8,i/10))
+    def test_pacer_subtracts_work_and_never_busy_spins_or_sleeps_after_stop(self):
+        from unittest.mock import Mock,patch
+        stop=Mock();stop.is_set.return_value=False
+        with patch('model_glow.time.monotonic',return_value=1.002),patch('model_glow.time.sleep') as sleep:
+            wait_contour_frame(stop,1.,1/240)
+            self.assertAlmostEqual(sleep.call_args.args[0],1/240-.002)
+            wait_contour_frame(stop,.5,1/240)
+            sleep.assert_called_with(.001)
+            stop.is_set.return_value=True;sleep.reset_mock()
+            wait_contour_frame(stop,1.,1/240)
+            sleep.assert_not_called()

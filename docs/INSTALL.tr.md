@@ -33,14 +33,14 @@ $env:CS2_STEAM_INF = 'D:\SteamLibrary\steamapps\common\Counter-Strike Global Off
 
 Örnekteki sürücüyü kendi yolunla değiştir. Başkasının GSI anahtarını kopyalama.
 
-## Oluşturduğun EXE ile
+## Hazır Windows paketi ile
 
-[Derleme rehberinden](BUILD.tr.md) ZIP'i oluştur, yazılabilir bir klasöre çıkar. EXE ile `map-tools` klasörünü birlikte tut. Çıkardığın klasörde:
+[1.1.2 sürüm sayfasından](https://github.com/tolgaugurlu/cs2-external-cheat-studio/releases/tag/v1.1.2) `StudioPanel-1.1.2-Windows-x64.zip` dosyasını indir veya [derleme rehberini](BUILD.tr.md) izleyerek kendin oluştur. ZIP'i yazılabilir bir klasöre çıkar; içindeki `StudioPanel` klasöründe EXE ile `map-tools` birlikte bulunur. Bu klasörde:
 
 ```powershell
-.\CS2Studio.exe --demo
-.\CS2Studio.exe --setup
-.\CS2Studio.exe
+.\StudioPanel-1.1.2.exe --demo
+.\StudioPanel-1.1.2.exe --setup
+.\StudioPanel-1.1.2.exe
 ```
 
 `--setup` sonucu bir iletişim kutusunda gösterir. Sonrasında oyunu yeniden başlat. Normal açılış oyun sürümünü kontrol eder ve eşleşen offsetleri indirir. Veri güncel değilse eski offsetleri zorlayarak kullanma.

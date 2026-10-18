@@ -1,20 +1,22 @@
-# CS2 Studio — Harici CS2 Hile Araçları
+# Studio Panel — Harici CS2 Hile Araçları
 
-**Counter-Strike 2 · Python · Windows x64 · ESP · Aim / RCS · Silah profilleri**
+**Counter-Strike 2 · Python · Windows x64 · Oyun konturu · Aim / RCS · Silah profilleri**
 
 [English](README.md) · [Kurulum](docs/INSTALL.tr.md) · [EXE oluşturma](docs/BUILD.tr.md) · [Kullanım](docs/USAGE.tr.md)
 
-CS2 Studio; ESP, nişan takibi, geri tepme düzeltmesi, flick dizisi, silaha özel profiller ve performans göstergelerini tek panelde toplar. Oyun belleğini okur/yazar ve girdi üretir. Arayüz Türkçedir.
+**Güncel sürüm: 1.1.2.** Yeni uygulama adı **Studio Panel**. Harita bağlantısı kurtarma ve kontur döngüsü iyileştirmelerini içerir; bağımsız ESP kaldırılmıştır. [Sürüm ve indirme](https://github.com/tolgaugurlu/cs2-external-cheat-studio/releases/tag/v1.1.2) · [Güncelleme / EXE adları](docs/UPDATES.tr.md) · [Türkçe sürüm notları](CHANGELOG.md).
+
+Studio Panel (önceki adı CS2 Studio); oyun konturu, nişan takibi, geri tepme düzeltmesi, flick dizisi, silaha özel profiller ve performans göstergelerini tek panelde toplar. Oyun belleğini okur/yazar ve girdi üretir. Arayüz Türkçedir.
 
 > **Hesap riski:** VAC güvenliği veya tespit edilmeme garantisi yoktur. Kullanım, bekleme süresine veya yasaklamaya neden olabilir. EXE adını değiştirmek güvenlik sağlamaz. Testlerin geçmesi anti-cheat uyumluluğu anlamına gelmez; sıfır kaçırma veya tek mermiyle öldürme garantisi verilmez.
 
 ![Görünüm sekmesi — çevrimdışı demo](docs/images/01-appearance.png)
 
-Ekran görüntüleri gerçek arayüzün **oyuna bağlanmayan demo modundan** alınmıştır. Karakter çizimleri ve profiller örnektir. Oyun içi başarı veya FPS ölçümü göstermezler.
+Ekran görüntüleri 1.1.0 sürümünün **oyuna bağlanmayan demo modundan** alınmıştır; eski uygulama adını gösterir. Karakter çizimleri ve profiller örnektir. Oyun içi başarı veya FPS ölçümü göstermezler.
 
 ## Neler var?
 
-- **Görünüm:** oyun Glow'u, bağımsız yaklaşık siluet, isteğe bağlı iskelet, kutu, sağlık ve etiketler.
+- **Görünüm:** yalnızca oyun konturu (Glow) ve renk paletleri; ayrı ESP çizimi kaldırıldı.
 - **Kontroller:** nişan tepkisi, FOV, tuş, hedef noktası ve dikey/yatay geri tepme ayarları.
 - **Flick shot:** seçilebilir tuş, tek işlem, önceki bakışa dönüş, bıçak ve önceki silah geçişi.
 - **Profiller:** silah → grup → genel önceliği; isimli ayar kaydı, yükleme ve geri alma.
@@ -57,7 +59,7 @@ Güncellemeden önce mevcut `ayar.json`, `profiller.json` ve `gsi_config.json` d
 
 ## Sınırlar
 
-Duvar testi sabit harita çarpışmasını kapsar; duman, hareketli kapılar ve sonradan kırılan nesnelerin tüm durumlarını kapsamaz. Bağımsız siluet gerçek modelin birebir dış çizgisi değildir. Oyun konturu seçeneğinde oyunun aynı alanlara yazması yanıp sönmeye yol açabilir. Yeni oyun sürümüyle eşleşen offset bulunamazsa etkinleştirme engellenir.
+Duvar testi sabit harita çarpışmasını kapsar; duman, hareketli kapılar ve sonradan kırılan nesnelerin tüm durumlarını kapsamaz. Oyun konturu seçeneğinde oyunun aynı alanlara yazması yanıp sönmeye yol açabilir. Yeni oyun sürümüyle eşleşen offset bulunamazsa etkinleştirme engellenir.
 
 Testler sentetik bellek ve sahte girdiler kullanır; canlı oyunda isabet veya FPS kazancı doğrulamaz.
 

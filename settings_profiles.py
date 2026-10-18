@@ -28,6 +28,10 @@ WEAPON_FIELDS = ('aim_response','fov','target_bone','aim_settle_ms','aim_max_spe
                  'rcs_enabled','rcs_scale','rcs_yaw_scale','trigger_mode','trigger_delay','awp_mode',
                  'flick_bone','flick_fov')
 
+# Kept here to accept old settings/profile files without resurrecting the overlay.
+RETIRED_VISUAL_FIELDS = frozenset(('ghost_esp', 'esp_render_mode', 'esp_profile',
+    'esp_text_scale', 'esp_skeleton', 'esp_boxes', 'esp_health', 'esp_labels'))
+
 
 def atomic_json(path, value):
     path = Path(path)
@@ -45,6 +49,7 @@ def atomic_json(path, value):
 
 def settings_snapshot(cfg):
     return {key:copy.deepcopy(value) for key in dir(cfg) if not key.startswith('_') and key!='enabled'
+            and key not in RETIRED_VISUAL_FIELDS
             and isinstance((value:=getattr(cfg,key)),(bool,int,float,str,list,dict,type(None)))}
 
 
@@ -53,6 +58,7 @@ def validate_values(values, baseline, weapon=False):
     result={}
     for key,value in values.items():
         if weapon and key not in WEAPON_FIELDS:raise ValueError('Silah profili yalnızca nişan ayarları içerebilir')
+        if key in RETIRED_VISUAL_FIELDS:continue
         if key=='enabled' or key not in baseline or (weapon and key not in WEAPON_FIELDS):continue
         original=baseline[key]
         if isinstance(original,bool):valid=isinstance(value,bool)

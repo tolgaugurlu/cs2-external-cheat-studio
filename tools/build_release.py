@@ -9,6 +9,8 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from app_version import APP_SLUG, EXE_NAME
 
 
 def run(*args):
@@ -37,14 +39,15 @@ def main():
     run(sys.executable, '-m', 'PyInstaller', '--clean', '--noconfirm', 'CS2Studio.spec')
     release = ROOT / 'release'
     release.mkdir(exist_ok=True)
-    archive = release / 'CS2Studio-Windows-x64.zip'
+    archive = release / f'{EXE_NAME}-Windows-x64.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as bundle:
-        bundle.write(ROOT / 'dist/CS2Studio.exe', 'CS2Studio/CS2Studio.exe')
+        bundle.write(ROOT / f'dist/{EXE_NAME}.exe', f'{APP_SLUG}/{EXE_NAME}.exe')
         for file in sorted(destination.rglob('*')):
             if file.is_file() and file.suffix.lower() != '.pdb':
-                bundle.write(file, 'CS2Studio/map-tools/' + file.relative_to(destination).as_posix())
-        for file in ('LICENSE', 'THIRD_PARTY_NOTICES.md', 'docs/INSTALL.md', 'docs/INSTALL.tr.md'):
-            bundle.write(ROOT / file, 'CS2Studio/' + Path(file).name)
+                bundle.write(file, f'{APP_SLUG}/map-tools/' + file.relative_to(destination).as_posix())
+        for file in ('LICENSE', 'THIRD_PARTY_NOTICES.md', 'CHANGELOG.md',
+                     'docs/INSTALL.md', 'docs/INSTALL.tr.md', 'docs/UPDATES.tr.md'):
+            bundle.write(ROOT / file, f'{APP_SLUG}/' + Path(file).name)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (release / 'SHA256SUMS.txt').write_text(f'{digest}  {archive.name}\n', encoding='ascii')
     print('Package:', archive)

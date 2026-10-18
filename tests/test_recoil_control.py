@@ -59,7 +59,8 @@ class RecoilTests(unittest.TestCase):
 
 
 class RecoilLoopTests(unittest.TestCase):
-    def run_loop(self,held=False,visible=False,dead_at=None,focus_at=None,bad_at=None,weapon_profile=None):
+    def run_loop(self,held=False,visible=False,dead_at=None,focus_at=None,bad_at=None,weapon_profile=None,
+                 target_point=(200,0,64)):
         """Drive the real loop with synthetic memory/keys; no game or OS input."""
         state=SimpleNamespace(frame=0)
         class Event:
@@ -89,7 +90,7 @@ class RecoilLoopTests(unittest.TestCase):
             read_uint=lambda a:99,read_team=lambda a:2 if a==1000 else 3,
             read_bytes=read,write_bytes=write,is_game_foreground=lambda:state.frame!=focus_at,
             visibility=SimpleNamespace(snapshot=lambda:geometry),entity_from_index=lambda *a:5000,
-            get_bones=lambda *a:{6:(200,0,64)},get_bone=lambda *a:(200,0,64),w2s=lambda *a:(960,540))
+            get_bones=lambda *a:{6:target_point,4:target_point},get_bone=lambda *a:target_point,w2s=lambda *a:(960,540))
         cfg=SimpleNamespace(enabled=True,aim_key=17,flick_enabled=False,rcs_enabled=True,
             team_mode=1,awp_mode=False,target_bone=6,fov=120,aim_response='Akıcı takip',
             aim_settle_ms=150,aim_max_speed=720,rcs_scale=100,rcs_yaw_scale=100)
@@ -120,6 +121,13 @@ class RecoilLoopTests(unittest.TestCase):
         writes=self.run_loop(held=True,visible=True)
         self.assertEqual(len({f for f,_ in writes}),len(writes))
         self.assertEqual(writes[-1],(3,(-3.,0.)))
+
+    def test_awp_profile_respects_smooth_response_instead_of_snapping(self):
+        regular=self.run_loop(held=True,visible=True,target_point=(200,40,64))
+        awp=self.run_loop(held=True,visible=True,target_point=(200,40,64),weapon_profile={'awp_mode':True})
+        self.assertEqual(awp,regular)
+        self.assertGreater(awp[1][1][1],0)
+        self.assertLess(awp[-1][1][1],math.degrees(math.atan2(40,200)))
 
     def test_death_focus_loss_and_bad_sample_do_not_write_or_replay_correction(self):
         for key in ('dead_at','focus_at','bad_at'):

@@ -1,22 +1,24 @@
-# CS2 Studio — External Cheat Toolkit
+# Studio Panel — External CS2 Cheat Toolkit
 
-**Counter-Strike 2 · Python · Windows x64 · ESP · Aim / RCS · Weapon profiles**
+**Current version: 1.1.2.** The application is now named **Studio Panel**. Includes map connection recovery and contour loop improvements; the independent ESP has been removed. [Release and downloads](https://github.com/tolgaugurlu/cs2-external-cheat-studio/releases/tag/v1.1.2) · [Changelog (Turkish)](CHANGELOG.md). Offset updates refresh data only; code changes require a new versioned build.
+
+**Counter-Strike 2 · Python · Windows x64 · Game Glow · Aim / RCS · Weapon profiles**
 
 [Türkçe](README.tr.md) · [Installation](docs/INSTALL.md) · [Build from source](docs/BUILD.md) · [User guide](docs/USAGE.md) · [Architecture](docs/ARCHITECTURE.md)
 
-CS2 Studio is an open-source Python external CS2 cheat with a compact Tkinter panel, ESP visualization, aim tracking, recoil control, flick sequencing, per-weapon profiles and local performance diagnostics. It reads and writes game memory and generates input. The interface is currently Turkish; documentation is available in English and Turkish.
+Studio Panel (formerly CS2 Studio) is an open-source Python external CS2 cheat with a compact Tkinter panel, game contour highlighting, aim tracking, recoil control, flick sequencing, per-weapon profiles and local performance diagnostics. It reads and writes game memory and generates input. The interface is currently Turkish; documentation is available in English and Turkish.
 
 > **Account risk:** this project is not VAC-safe or undetectable. Anti-cheat cooldowns and bans are possible. Renaming an executable does not establish safety. Functional tests do not evaluate anti-cheat detection. No zero-miss or one-shot-kill guarantee is made.
 
 ![CS2 Studio appearance panel — offline demonstration](docs/images/01-appearance.png)
 
-Screenshots show the real application UI in **offline demo mode** with synthetic character drawings and example profiles. They are not gameplay captures or evidence of in-game accuracy. The performance panel measures the demo/application process, not CS2 FPS.
+Screenshots show version 1.1.0 in **offline demo mode**, using the previous application name, with synthetic character drawings and example profiles. They are not gameplay captures or evidence of in-game accuracy. The performance panel measures the demo/application process, not CS2 FPS.
 
 ## Features
 
 | Area | Included |
 | --- | --- |
-| ESP / visuals | Game Glow, independent approximate silhouette, optional skeleton, corner boxes, health and labels |
+| ESP / visuals | Game contour (Glow) and color palettes; no independent overlay |
 | Aim / recoil | Smooth tracking, target stability, configurable vertical and horizontal recoil gains |
 | Flick sequence | Configurable button, single shot sequence, view restoration, knife selection and previous-weapon return |
 | Profiles | Gun → weapon group → general precedence; named settings, protected initial snapshot and undo |
@@ -62,7 +64,7 @@ The first normal launch uses the application's defaults. Save a gun profile to e
 
 - Game updates can invalidate offsets. If neither supported source matches the installed build, activation is blocked rather than using known-old values.
 - Visibility uses static map collision. Smoke, moving doors, changed breakable objects and every rendered model pixel are not represented.
-- The independent silhouette is an approximation from skeletal points, not the game's exact mesh. Game Glow may flicker when the game rewrites its fields.
+- Game Glow may flicker when the game rewrites its fields. The independent overlay was removed in 1.1.0.
 - Spread, movement, network delay and weapon deployment remain relevant. Tests cannot establish a zero-miss shot or an in-game performance gain.
 - Profile selection and diagnostics are convenience features, not anti-cheat protections.
 

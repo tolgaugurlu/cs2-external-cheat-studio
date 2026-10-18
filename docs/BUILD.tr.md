@@ -11,19 +11,21 @@ py -3.11 -m venv .venv
 Komut; harita yardımcısını kilitli NuGet bağımlılıklarıyla derler, Python testlerini çalıştırır, PyInstaller ile EXE oluşturur ve temiz ZIP hazırlar:
 
 ```text
-dist/CS2Studio.exe
+dist/StudioPanel-1.1.2.exe
 dist/map-tools/
-release/CS2Studio-Windows-x64.zip
+release/StudioPanel-1.1.2-Windows-x64.zip
 release/SHA256SUMS.txt
 ```
 
-ZIP'e yalnızca belirlenen yayın dosyaları alınır. Kişisel ayarlar, profiller, bağlantı anahtarları, günlükler, offsetler ve harita önbellekleri dahil edilmez. Her kullanıcı kendi kurulumunda `CS2Studio.exe --setup` çalıştırır.
+ZIP'e yalnızca belirlenen yayın dosyaları alınır. Kişisel ayarlar, profiller, bağlantı anahtarları, günlükler, offsetler ve harita önbellekleri dahil edilmez. Her kullanıcı kendi kurulumunda `StudioPanel-1.1.2.exe --setup` çalıştırır.
+
+Uygulama adı ve sürümü `app_version.py` dosyasında tanımlıdır. Bu bilgiler EXE adına, panel başlığına ve Windows'taki **Özellikler → Ayrıntılar** bölümüne birlikte yansır. Gelecek sürümlerde de `StudioPanel-<sürüm>.exe` biçimi kullanılır.
 
 Oyuna bağlanmadan EXE'yi kontrol et:
 
 ```powershell
-.\dist\CS2Studio.exe --demo
-Get-FileHash .\release\CS2Studio-Windows-x64.zip -Algorithm SHA256
+.\dist\StudioPanel-1.1.2.exe --demo
+Get-FileHash .\release\StudioPanel-1.1.2-Windows-x64.zip -Algorithm SHA256
 ```
 
 Hash değeri `SHA256SUMS.txt` ile eşleşmeli. Bu kontrol dosya bütünlüğünü gösterir; VAC güvenliğini göstermez.

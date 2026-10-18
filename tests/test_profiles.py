@@ -76,6 +76,21 @@ class ProfileTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.store.save_settings('Başlangıç ayarlarım',self.cfg)
         with self.assertRaises(ValueError):self.store.remove_settings('Başlangıç ayarlarım')
 
+    def test_legacy_overlay_profile_is_loadable_without_reintroducing_retired_fields(self):
+        self.store.save_settings('Eski ESP',self.cfg)
+        values=self.store.data['settings']['Eski ESP']['values']
+        values.update(ghost_esp=True,esp_render_mode='Kararlı siluet',esp_boxes=True)
+        values.update(glow_chams=True,esp_palette='Altın / Mavi',fov=185)
+        atomic_json(self.path,self.store.data)
+        loaded=ProfileStore(self.path,self.cfg)
+        self.assertFalse(loaded.error)
+        loaded.apply_settings('Eski ESP',self.cfg)
+        self.assertFalse(hasattr(self.cfg,'ghost_esp'))
+        self.assertFalse(hasattr(self.cfg,'esp_render_mode'))
+        self.assertEqual((self.cfg.glow_chams,self.cfg.esp_palette,self.cfg.fov),(True,'Altın / Mavi',185))
+        loaded.apply_settings(None,self.cfg,undo=True)
+        self.assertEqual(self.cfg.fov,170)
+
     def test_invalid_override_rejected_without_writing_any_file(self):
         before=self.path.read_bytes()
         for values in ({'fov':float('nan')},{'fov':999},{'rcs_enabled':1},{'enabled':True},

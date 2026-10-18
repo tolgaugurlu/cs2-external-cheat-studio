@@ -12,20 +12,22 @@ The build script compiles the C# map helper using the NuGet lock file, runs the 
 
 ```text
 dist/
-  CS2Studio.exe
+  StudioPanel-1.1.2.exe
   map-tools/
 release/
-  CS2Studio-Windows-x64.zip
+  StudioPanel-1.1.2-Windows-x64.zip
   SHA256SUMS.txt
 ```
 
-The ZIP uses an explicit file allowlist. It excludes saved settings, profiles, tokens, logs, downloaded offsets and local map caches. Each user runs `CS2Studio.exe --setup` to create their own local configuration.
+The ZIP uses an explicit file allowlist. It excludes saved settings, profiles, tokens, logs, downloaded offsets and local map caches. Each user runs `StudioPanel-1.1.2.exe --setup` to create their own local configuration.
+
+`app_version.py` supplies the application name and version for the filename, window title and Windows file properties. Future builds use the same `StudioPanel-<version>.exe` format.
 
 Check the resulting UI without connecting to a game:
 
 ```powershell
-.\dist\CS2Studio.exe --demo
-Get-FileHash .\release\CS2Studio-Windows-x64.zip -Algorithm SHA256
+.\dist\StudioPanel-1.1.2.exe --demo
+Get-FileHash .\release\StudioPanel-1.1.2-Windows-x64.zip -Algorithm SHA256
 ```
 
 Compare the hash with `release/SHA256SUMS.txt`. A matching hash confirms file integrity, not anti-cheat safety.
@@ -38,7 +40,7 @@ Compare the hash with `release/SHA256SUMS.txt`. A matching hash confirms file in
 .\.venv\Scripts\python.exe tools/demo.py
 ```
 
-`--startup-check` also exercises the packaged UI and renderer but expects a locally installed game and matching offsets; it can retrieve missing offset data. It does not run input workers. Use `--demo` for a completely game-independent preview.
+`--startup-check` also exercises the packaged UI, contour controls and hotkeys but expects a locally installed game and matching offsets; it can retrieve missing offset data. It does not run input workers. Use `--demo` for a completely game-independent preview.
 
 ## Scope of reproducibility
 

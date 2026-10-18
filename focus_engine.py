@@ -5,7 +5,7 @@ import logging
 import struct
 import time
 
-from esp_visuals import BONE_IDS
+from visual_style import BONE_IDS
 from targeting import team_allowed, current_target
 from smooth_lock import SmoothLock, normalized
 from recoil_control import RecoilControl
@@ -553,7 +553,7 @@ def _aim_loop(eng,cfg,flick):
 
             visual_current = normalized(tuple(current[i]-recoil_delta[i]+recoil[i] for i in range(2)))
             desired = aim_angles(eye,point)
-            if cfg.aim_response == 'Akıcı takip' and not cfg.awp_mode:
+            if cfg.aim_response == 'Akıcı takip':
 
 
                 identity = (pawn,ctrl,handle,scanner.point_token)
@@ -561,7 +561,7 @@ def _aim_loop(eng,cfg,flick):
                                       cfg.aim_settle_ms,cfg.aim_max_speed)
             else:
                 motion.reset()
-                tracked = step_angles(visual_current,desired,dt,cfg.aim_response=='Keskin kilit' or cfg.awp_mode,
+                tracked = step_angles(visual_current,desired,dt,cfg.aim_response=='Keskin kilit',
                                      cfg.smooth,cfg.speed_cap*90/max(1,eng.sx))
             result = normalized(tuple(tracked[i]-recoil[i] for i in range(2)))
             if not same_shooter(local,weapon):

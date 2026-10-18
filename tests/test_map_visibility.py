@@ -4,7 +4,7 @@ import tempfile
 import time
 import unittest
 
-from map_visibility import CollisionMap, MapVisibility, segment_distance_sq
+from map_visibility import CollisionMap, MapVisibility, MapSignalServer, segment_distance_sq
 from focus_engine import aim_angles,step_angles,visible_sample
 
 
@@ -81,6 +81,14 @@ class GeometryTests(unittest.TestCase):
         self.assertIsNone(service.snapshot())
         service.accept_state({'map':{'name':'../../de_dust2'}})
         self.assertIsNone(service.snapshot())
+
+
+class SignalOwnershipTests(unittest.TestCase):
+    def test_second_listener_cannot_take_the_same_local_port(self):
+        from http.server import BaseHTTPRequestHandler
+        with MapSignalServer(('127.0.0.1',0),BaseHTTPRequestHandler) as first:
+            with self.assertRaises(OSError):
+                MapSignalServer(first.server_address,BaseHTTPRequestHandler)
 
 
 class AngleTests(unittest.TestCase):

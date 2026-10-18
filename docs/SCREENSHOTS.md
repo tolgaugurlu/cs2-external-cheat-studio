@@ -1,6 +1,6 @@
 # Screenshot gallery / Ekran görüntüleri
 
-Real Tkinter UI captured from `memory_bot.py --demo`. Synthetic characters and example profiles; no game connection. Diagnostics describe the demo process, not gameplay.
+Version 1.1.0: real Tkinter UI captured from `CS2Studio-1.1.0.exe --demo`. Synthetic characters and example profiles; no game connection. Diagnostics describe the demo process, not gameplay. Version 1.1.2 uses the name **Studio Panel**; these captures retain the previous name.
 
 ## Appearance / Görünüm
 ![Appearance](images/01-appearance.png)

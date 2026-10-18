@@ -49,8 +49,7 @@ class SmoothLock:
             transient = (relative-omega*delta)*dt
             step = delta+target_velocity*dt+(-delta+transient)*decay
             next_velocity = target_velocity+(relative-omega*transient)*decay
-            # Never predict beyond the currently verified visible point, or
-
+            # Stay between the current view and the verified visible point.
             bounded = max(0.,min(delta,step)) if delta >= 0 else min(0.,max(delta,step))
             if abs(delta) < .004:
                 bounded, next_velocity = delta, 0.

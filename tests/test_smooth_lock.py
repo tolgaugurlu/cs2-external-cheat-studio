@@ -163,8 +163,12 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual((cfg.aim_response,cfg.aim_settle_ms,cfg.aim_max_speed),('Ayarlanabilir',130,450))
 
     def test_turkish_settings_survive_utf8_save_and_reload(self):
-        cfg=self.load({'aim_tuning_version':1,'aim_response':'Akıcı takip','esp_render_mode':'Kararlı siluet'})
-        self.assertEqual((cfg.aim_response,cfg.esp_render_mode),('Akıcı takip','Kararlı siluet'))
+        cfg=self.load({'aim_tuning_version':1,'aim_response':'Akıcı takip','esp_palette':'Altın / Mavi',
+                       'esp_render_mode':'Kararlı siluet','ghost_esp':True,'glow_chams':True})
+        self.assertEqual((cfg.aim_response,cfg.esp_palette),('Akıcı takip','Altın / Mavi'))
+        self.assertTrue(cfg.glow_chams)
+        self.assertFalse(hasattr(cfg,'esp_render_mode'))
+        self.assertFalse(hasattr(cfg,'ghost_esp'))
 
     def test_ignored_legacy_recoil_gain_migrates_to_previous_effective_strength(self):
         cfg=self.load({'rcs_scale':129,'rcs_yaw_scale':70})

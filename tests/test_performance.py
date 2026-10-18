@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
 
-from esp_visuals import BONE_IDS
+from visual_style import BONE_IDS
 from focus_engine import TargetScan
 from targeting import TriggerPulse
 from fire_control import FireControl

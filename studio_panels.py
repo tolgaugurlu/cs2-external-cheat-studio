@@ -191,7 +191,7 @@ class StudioPanels:
         self.perf_text.config(text='CPU   '+fmt(metrics.get('cpu'),'%')+'\nBellek (RAM)   '+fmt(metrics.get('rss'),'MiB')+
                                    '\nÖzel ayrılan bellek   '+fmt(metrics.get('private'),'MiB'))
         rows=[]
-        for key in ('Nişan','ESP'):
+        for key in ('Nişan','Kontur'):
             value=metrics.get('stages',{}).get(key)
             rows.append(f'{key}:  {value["mean"]:.2f} / {value["p95"]:.2f} ms' if value else key+':  bekliyor')
         self.stage_text.config(text='Döngü süreleri · ortalama / P95\n\n'+'\n'.join(rows))

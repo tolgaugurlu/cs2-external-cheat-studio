@@ -13,8 +13,9 @@ import json
 
 import sys
 from offset_manager import field_offset, update_offsets, OffsetError
-from esp_visuals import PALETTES
-from model_glow import ModelGlow, GlowMonitor
+from visual_style import PALETTES
+from app_version import APP_NAME, APP_VERSION
+from model_glow import ModelGlow, wait_contour_frame
 from targeting import current_target, team_allowed
 from fire_control import FireControl
 from flick_shot import FLICK_KEYS
@@ -34,7 +35,7 @@ except: ctypes.windll.user32.SetProcessDPIAware()
 
 _PROC = 'cs2.exe'
 _MOD = 'client.dll'
-APP_TITLE = 'CS2 Studio'
+APP_TITLE = f'{APP_NAME} {APP_VERSION}'
 
 
 if getattr(sys, 'frozen', False):
@@ -50,7 +51,7 @@ CONFIG_FILE    = os.path.join(_BASE_DIR, "ayar.json")
 class Config:
     enabled=False; fov=120; smooth=12.0; speed_cap=40
     team_mode=1; target_bone=100; aim_key=0x10
-    rcs_enabled=True; ghost_esp=False; radar_hack=True; vis_check=True
+    rcs_enabled=True; radar_hack=True; vis_check=True
     rcs_scale=100; rcs_yaw_scale=100; rcs_tuning_version=1
     trigger_enabled=False; trigger_delay=10; trigger_mode="BURST"
     bhop_enabled=True; awp_mode=False
@@ -63,9 +64,7 @@ class Config:
     mode_name="STABLE"
     aim_response="Akıcı takip"
     aim_settle_ms=90; aim_max_speed=720; aim_tuning_version=1
-    esp_profile="Dengeli"; esp_palette="Koral / Mavi"; esp_text_scale=110
-    esp_render_mode="Otomatik"
-    esp_skeleton=False; esp_boxes=False; esp_health=True; esp_labels=True
+    esp_palette="Koral / Mavi"
 
     @staticmethod
     def set_preset(name, sync_fn=None):
@@ -84,7 +83,10 @@ class Config:
             try:
                 with open(CONFIG_FILE, encoding='utf-8-sig') as f:
                     loaded = json.load(f)
-                    [setattr(Config,k,v) for k,v in loaded.items()]
+                    if isinstance(loaded, dict):
+                        from settings_profiles import settings_snapshot, validate_values
+                        for key, value in validate_values(loaded, settings_snapshot(Config)).items():
+                            setattr(Config, key, value)
             except: pass
 
 
@@ -109,9 +111,8 @@ class Config:
     @staticmethod
     def save():
         try:
-            from settings_profiles import atomic_json
-            d={k:v for k,v in Config.__dict__.items()
-               if not k.startswith("__") and not callable(v) and k!="enabled"}
+            from settings_profiles import atomic_json, settings_snapshot
+            d = settings_snapshot(Config)
             atomic_json(CONFIG_FILE,d)
             return True
         except (OSError,ValueError,TypeError):
@@ -204,7 +205,7 @@ class CS2Engine:
     def __init__(self):
         self.pm=None; self.client=None
         self.stop_event = threading.Event()
-        self.glow_status = "Model silueti bekliyor"
+        self.glow_status = "Oyun konturu bekliyor"
         self.glow_thread = None
         self.trigger_thread = None
         self.aim_thread = None
@@ -437,30 +438,18 @@ def glow_worker(eng):
                 return None
 
         controller = ModelGlow(eng.read_bytes, eng.write_bytes, eng._f, valid)
-        monitor = GlowMonitor()
-        previous_mode = None
-        eng.glow_fallback = False
         last_diagnostic = time.monotonic()
         while not eng.stop_event.is_set():
+            frame_started = time.perf_counter()
+            frame_schedule = time.monotonic()
             foreground = False
             try:
                 active = set()
                 enabled = Config.enabled and Config.glow_chams and eng.pm
-                mode = getattr(Config,'esp_render_mode','Otomatik')
-                if mode != previous_mode:
-                    monitor.reset()
-                    eng.glow_fallback = False
-                    previous_mode = mode
-                fallback = mode == 'Kararlı siluet' or (mode == 'Otomatik' and monitor.fallback)
-                foreground = enabled and eng.is_game_foreground() and not fallback
+                foreground = enabled and eng.is_game_foreground()
                 if not enabled:
                     controller.restore_except()
-                    monitor.reset()
-                    eng.glow_fallback = False
-                    eng.glow_status = 'Model silueti kapalı'
-                elif fallback:
-                    controller.restore_except()
-                    eng.glow_status = 'Kararlı siluet' + (' · otomatik geçiş' if mode == 'Otomatik' else '')
+                    eng.glow_status = 'Oyun konturu kapalı'
                 elif foreground:
                     entity_list = eng.read_longlong(eng.client + eng.off['dwEntityList'])
                     context = view_context(eng,entity_list) if entity_list else None
@@ -484,29 +473,30 @@ def glow_worker(eng):
                                 active.update(key for key in controller.saved if key[0]==ctrl and key[2]==pawn)
                                 continue
                         controller.restore_except(active,grace=.75)
-                        eng.glow_status = f'Model silueti: {len(active)} oyuncu'
-                        if mode == 'Otomatik' and monitor.observe(controller.effect_resets,len(active),time.monotonic()):
-                            eng.glow_fallback = True
-                            logging.info('[Glow] Repeated engine overwrites: switching to independent silhouette')
-                        controller.effect_resets = 0
+                        eng.glow_status = f'Oyun konturu: {len(active)} oyuncu'
                     else:
-                        eng.glow_status = 'Model silueti: oyuncu / izleyici verisi bekleniyor'
+                        eng.glow_status = 'Oyun konturu: oyuncu / izleyici verisi bekleniyor'
 
-                # every field. Explicit disable and shutdown still restore.
                 if time.monotonic()-last_diagnostic >= 10:
-                    logging.info('[Glow] tracked=%d repairs=%s removals=%d overwritten_bytes=%s fallback=%s',
+                    logging.info('[Glow] tracked=%d repairs=%s removals=%d overwritten_bytes=%s resets=%d interval_ms=%.2f',
                                  len(controller.saved),controller.repairs,controller.removals,
-                                 controller.last_overwrites,eng.glow_fallback)
+                                 controller.last_overwrites,controller.effect_resets,controller.interval()*1000)
                     controller.repairs = dict.fromkeys(controller.repairs,0)
                     controller.removals = 0
                     controller.last_overwrites.clear()
+                    controller.effect_resets = 0
                     last_diagnostic = time.monotonic()
             except Exception as error:
-                eng.glow_status = f'Model silueti hatası: {error}'
+                eng.glow_status = f'Oyun konturu hatası: {error}'
 
-            eng.stop_event.wait(1/60 if foreground else .1)
+            if foreground and hasattr(eng, 'stats'):
+                eng.stats.timing('Kontur', time.perf_counter() - frame_started)
+            if foreground:
+                wait_contour_frame(eng.stop_event, frame_schedule, controller.interval())
+            else:
+                eng.stop_event.wait(.1)
     except Exception as error:
-        eng.glow_status = f'Model silueti kullanılamıyor: {error}'
+        eng.glow_status = f'Oyun konturu kullanılamıyor: {error}'
     finally:
         if controller:
             try:
@@ -560,9 +550,9 @@ if __name__ == "__main__":
         setup_root.withdraw()
         try:
             installed_path = install(_BASE_DIR)
-            messagebox.showinfo('CS2 Studio setup', f'Map configuration installed:\n{installed_path}\n\nRestart CS2 to load it.')
+            messagebox.showinfo(f'{APP_NAME} kurulumu', f'Harita bağlantısı kuruldu:\n{installed_path}\n\nYüklemek için CS2’yi yeniden başlat.')
         except Exception as error:
-            messagebox.showerror('CS2 Studio setup', str(error))
+            messagebox.showerror(f'{APP_NAME} kurulumu', str(error))
             setup_root.destroy()
             sys.exit(1)
         setup_root.destroy()
@@ -607,26 +597,16 @@ if __name__ == "__main__":
         result['f2_enabled'] = Config.enabled
         check_panel.poll_hotkeys()
         result['held_key_does_not_repeat'] = Config.enabled
-        from gdi_overlay import GdiSink
-        from esp_visuals import EspRenderer,sample_pose
-        check_sink=GdiSink(320,320,position=(10000,10000))
-        try:
-            check_renderer=EspRenderer(check_sink)
-            check_renderer.begin((320,320))
-            check_renderer.player(1,sample_pose(160,45,220),100,None,
-                silhouette=True,skeleton=False,boxes=False,health_bar=False,labels=False)
-            check_renderer.end()
-            result['silhouette_surface']=check_sink.frames==1 and check_sink.visible
-        finally:
-            check_sink.close()
+        result['contour_only'] = ('glow_chams' in check_panel.vars and 'ghost_esp' not in check_panel.vars
+                                  and not hasattr(check_panel, 'ov'))
         check_panel.close()
         Path(_BASE_DIR,'startup-check.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
-        sys.exit(0 if all(result[key] for key in ('ready','button_enabled','f2_enabled','held_key_does_not_repeat','silhouette_surface','flick_controls','weapon_profiles','performance_sample')) else 1)
+        sys.exit(0 if all(result[key] for key in ('ready','button_enabled','f2_enabled','held_key_does_not_repeat','contour_only','flick_controls','weapon_profiles','performance_sample')) else 1)
     # Two copies must not race over glow restoration, hotkeys or the local map port.
     ctypes.windll.kernel32.CreateMutexW.restype = ctypes.c_void_p
     _instance_mutex = ctypes.windll.kernel32.CreateMutexW(None, False, 'Local\\CS2Tool.Studio')
     if ctypes.windll.kernel32.GetLastError() == 183:
-        ctypes.windll.user32.MessageBoxW(None, 'CS2Tool zaten açık. Paneli F3 ile gösterebilirsin.', 'CS2Tool', 0x40)
+        ctypes.windll.user32.MessageBoxW(None, f'{APP_NAME} veya önceki sürümü zaten açık. Paneli F3 ile gösterebilirsin.', APP_TITLE, 0x40)
         sys.exit(0)
     Config.load()
     eng = CS2Engine()
